@@ -1,0 +1,5 @@
+---
+- name: Install OpenJDK 8
+  apt: pkg={{ item }} update_cache=yes state=latest install_recommends=yes
+  with_items:
+    - openjdk-8-jdk-headless

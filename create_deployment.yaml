@@ -99,10 +99,10 @@
         assign_public_ip: yes
         wait: true
         instance_tags:
-          Group: master
+          Group: hadoop_master
         exact_count: 1
         count_tag:
-          Group: master
+          Group: hadoop_master
       register: ec2_master
     
     - name: Data node EC2 instances
@@ -116,10 +116,10 @@
         assign_public_ip: yes
         wait: true
         instance_tags:
-          Group: datanodes
+          Group: hadoop_datanodes
         exact_count: "{{ datanode_count }}"
         count_tag:
-          Group: datanodes
+          Group: hadoop_datanodes
       register: ec2_datanode
 
     - name: Gather master instances
@@ -154,6 +154,14 @@
       raw: apt-get -y install python python-simplejson
       when: python_installed|failed
 
-  tasks:
-    
-    - apt: update_cache=yes cache_valid_time=3600
+- hosts: hadoop_master
+  remote_user: ubuntu
+  become: yes
+  roles:
+    - openjdk8
+
+- hosts: hadoop_datanodes
+  remote_user: ubuntu
+  become: yes
+  roles:
+    - openjdk8
