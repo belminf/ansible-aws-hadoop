@@ -1,0 +1,161 @@
+---
+- name: Create and configure AWS
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    ubuntu_ami: ami-13be557e
+    cidr_block: 172.16.0.0/16
+    region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+    az: "{{ lookup('env','AWS_DEFAULT_AZ') }}"
+    keypair: "{{ lookup('env','AWS_DEFAULT_KEYPAIR') }}"
+    datanode_count: 2
+  tasks:
+
+    - name: VPC networking
+      ec2_vpc:
+        state: present
+        cidr_block: "{{ cidr_block }}"
+        region: "{{ region }}"
+        resource_tags:
+          Name: vpc_hadoop
+        internet_gateway: yes
+        wait: yes
+      register: vpc
+    
+    - name: Subnet routable to internet
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc.vpc_id }}"
+        cidr: 172.16.1.0/24
+        region: "{{ region }}"
+        az: "{{ az }}"
+        resource_tags:
+          Name: sn_front
+      register: sn_front
+
+    - name: Subnet with internal routes only
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc.vpc_id }}"
+        cidr: 172.16.2.0/24
+        region: "{{ region }}"
+        az: "{{ az }}"
+        resource_tags:
+          Name: sn_back
+      register: sn_back
+
+    - name: Routing table with internet
+      ec2_vpc_route_table:
+        vpc_id: "{{ vpc.vpc_id }}"
+        region: "{{ region }}"
+        subnets:
+          - "{{ sn_front.subnet.id }}"
+          - "{{ sn_back.subnet.id }}"
+        routes:
+          - dest: 0.0.0.0/0
+            gateway_id: igw
+        resource_tags:
+          Name: rt_internet
+
+    - name: External IP for SG rule
+      uri: url=http://checkip.amazonaws.com/ return_content=yes
+      register: checkip
+
+    - name: Front security group
+      ec2_group:
+        name: sg_front
+        description: Front
+        region: "{{ region }}"
+        vpc_id: "{{ vpc.vpc_id }}"
+        rules:
+          - proto: tcp
+            to_port: 22
+            from_port: 22
+            cidr_ip: "{{ checkip.content | replace('\n', '') }}/32"
+          - proto: all
+            group_name: sg_front
+
+    - name: Back security group
+      ec2_group:
+        name: sg_back
+        description: Back
+        region: "{{ region }}"
+        vpc_id: "{{ vpc.vpc_id }}"
+        rules:
+          - proto: tcp
+            to_port: 22
+            from_port: 22
+            cidr_ip: "{{ checkip.content | replace('\n', '') }}/32"
+          - proto: all
+            group_name: sg_back
+
+    - name: Master EC2 instance
+      ec2:
+        key_name: "{{ keypair }}"
+        group: sg_front
+        instance_type: t2.micro
+        image: "{{ ubuntu_ami }}"
+        region: "{{ region }}"
+        vpc_subnet_id: "{{ sn_front.subnet.id }}"
+        assign_public_ip: yes
+        wait: true
+        instance_tags:
+          Group: master
+        exact_count: 1
+        count_tag:
+          Group: master
+      register: ec2_master
+    
+    - name: Data node EC2 instances
+      ec2:
+        key_name: "{{ keypair }}"
+        group: sg_back
+        instance_type: t2.micro
+        image: "{{ ubuntu_ami }}"
+        region: "{{ region }}"
+        vpc_subnet_id: "{{ sn_back.subnet.id }}"
+        assign_public_ip: yes
+        wait: true
+        instance_tags:
+          Group: datanodes
+        exact_count: "{{ datanode_count }}"
+        count_tag:
+          Group: datanodes
+      register: ec2_datanode
+
+    - name: Gather master instances
+      add_host: hostname={{ item.public_ip }} groups={{ item.tags.Group }},hadoop
+      with_items: "{{ ec2_master.tagged_instances }}"
+      changed_when: no
+
+    - name: Gather datanode instances
+      add_host: hostname={{ item.public_ip }} groups={{ item.tags.Group }},hadoop
+      with_items: "{{ ec2_datanode.tagged_instances }}"
+      changed_when: no
+
+    - name: Wait for SSH to come up
+      wait_for: host={{ item.public_dns_name }} port=22 delay=60 timeout=320 state=started
+      with_items: 
+        - "{{ ec2_master.instances }}"
+        - "{{ ec2_datanode.instances }}"
+
+- hosts: hadoop
+  remote_user: ubuntu
+  gather_facts: no
+  become: yes
+
+  pre_tasks:
+
+    - name: Verify python installed
+      raw: dpkg -s python-simplejson > /dev/null 2>&1
+      register: python_installed
+      ignore_errors: True
+
+    - name: Install python
+      raw: apt-get -y install python python-simplejson
+      when: python_installed|failed
+
+  tasks:
+
+  - apt: update_cache=yes cache_valid_time=3600
+
+  - apt: name=tmux state=latest
