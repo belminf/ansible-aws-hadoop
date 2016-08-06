@@ -15,8 +15,8 @@ Configuration for AWS CLI:
 Required for the AWS playbook:
 
     AWS_DEFAULT_REGION="us-east-1"
-    AWS_KEY_NAME="my_ssh_key"
     AWS_DEFAULT_AZ="us-east-1a"
+    AWS_KEY_NAME="my_ssh_key"
 
 # Creating the AWS deployment
     $  ansible-playbook playbooks/create_aws_env.yaml
