@@ -19,4 +19,4 @@ Required for the AWS playbook:
     AWS_KEY_NAME="my_ssh_key"
 
 # Creating the AWS deployment
-    $  ansible-playbook playbooks/create_aws_env.yaml
+    $  ansible-playbook create_deployment.yaml
