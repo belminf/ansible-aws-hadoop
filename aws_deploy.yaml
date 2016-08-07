@@ -9,7 +9,8 @@
     region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
     az: "{{ lookup('env','AWS_DEFAULT_AZ') }}"
     keypair: "{{ lookup('env','AWS_DEFAULT_KEYPAIR') }}"
-    datanode_count: 2
+    master_node_count: 1
+    data_node_node: 2
   tasks:
 
     - name: VPC networking
@@ -100,7 +101,7 @@
         wait: true
         instance_tags:
           Group: hadoop_master
-        exact_count: 1
+        exact_count: "{{ master_node_count }}"
         count_tag:
           Group: hadoop_master
       register: ec2_master
@@ -117,7 +118,7 @@
         wait: true
         instance_tags:
           Group: hadoop_datanodes
-        exact_count: "{{ datanode_count }}"
+        exact_count: "{{ data_node_count }}"
         count_tag:
           Group: hadoop_datanodes
       register: ec2_datanode
