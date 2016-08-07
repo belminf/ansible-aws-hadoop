@@ -9,8 +9,8 @@
     region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
     az: "{{ lookup('env','AWS_DEFAULT_AZ') }}"
     keypair: "{{ lookup('env','AWS_DEFAULT_KEYPAIR') }}"
-    master_node_count: 1
-    data_node_node: 2
+    master_nodes_count: 1
+    data_nodes_count: 2
   tasks:
 
     - name: VPC networking
@@ -31,26 +31,15 @@
         region: "{{ region }}"
         az: "{{ az }}"
         resource_tags:
-          Name: sn_front
-      register: sn_front
-
-    - name: Subnet with internal routes only
-      ec2_vpc_subnet:
-        vpc_id: "{{ vpc.vpc_id }}"
-        cidr: 172.16.2.0/24
-        region: "{{ region }}"
-        az: "{{ az }}"
-        resource_tags:
-          Name: sn_back
-      register: sn_back
+          Name: sn_hadoop
+      register: sn_hadoop
 
     - name: Routing table with internet
       ec2_vpc_route_table:
         vpc_id: "{{ vpc.vpc_id }}"
         region: "{{ region }}"
         subnets:
-          - "{{ sn_front.subnet.id }}"
-          - "{{ sn_back.subnet.id }}"
+          - "{{ sn_hadoop.subnet.id }}"
         routes:
           - dest: 0.0.0.0/0
             gateway_id: igw
@@ -61,10 +50,10 @@
       uri: url=http://checkip.amazonaws.com/ return_content=yes
       register: checkip
 
-    - name: Front security group
+    - name: Hadoop master nodes security group
       ec2_group:
-        name: sg_front
-        description: Front
+        name: sg_hadoop_master_nodes
+        description: Hadoop master nodes
         region: "{{ region }}"
         vpc_id: "{{ vpc.vpc_id }}"
         rules:
@@ -73,12 +62,12 @@
             from_port: 22
             cidr_ip: "{{ checkip.content | replace('\n', '') }}/32"
           - proto: all
-            group_name: sg_front
+            group_name: sg_hadoop_master_nodes
 
-    - name: Back security group
+    - name: Hadoop data nodes security group
       ec2_group:
-        name: sg_back
-        description: Back
+        name: sg_hadoop_data_nodes
+        description: Hadoop data nodes
         region: "{{ region }}"
         vpc_id: "{{ vpc.vpc_id }}"
         rules:
@@ -87,21 +76,21 @@
             from_port: 22
             cidr_ip: "{{ checkip.content | replace('\n', '') }}/32"
           - proto: all
-            group_name: sg_back
+            group_name: sg_hadoop_master_nodes
 
-    - name: Master EC2 instance
+    - name: Master EC2 instances
       ec2:
         key_name: "{{ keypair }}"
-        group: sg_front
+        group: sg_hadoop_master_nodes
         instance_type: t2.micro
         image: "{{ ubuntu_ami }}"
         region: "{{ region }}"
-        vpc_subnet_id: "{{ sn_front.subnet.id }}"
+        vpc_subnet_id: "{{ sn_hadoop.subnet.id }}"
         assign_public_ip: yes
         wait: true
         instance_tags:
           Group: hadoop_master
-        exact_count: "{{ master_node_count }}"
+        exact_count: "{{ master_nodes_count }}"
         count_tag:
           Group: hadoop_master
       register: ec2_master
@@ -109,16 +98,16 @@
     - name: Data node EC2 instances
       ec2:
         key_name: "{{ keypair }}"
-        group: sg_back
+        group: sg_hadoop_data_nodes
         instance_type: t2.micro
         image: "{{ ubuntu_ami }}"
         region: "{{ region }}"
-        vpc_subnet_id: "{{ sn_back.subnet.id }}"
+        vpc_subnet_id: "{{ sn_hadoop.subnet.id }}"
         assign_public_ip: yes
         wait: true
         instance_tags:
           Group: hadoop_datanodes
-        exact_count: "{{ data_node_count }}"
+        exact_count: "{{ data_nodes_count }}"
         count_tag:
           Group: hadoop_datanodes
       register: ec2_datanode
