@@ -159,9 +159,11 @@
   become: yes
   roles:
     - openjdk8
+    - passwordless_ssh
 
 - hosts: hadoop_datanodes
   remote_user: ubuntu
   become: yes
   roles:
     - openjdk8
+    - passwordless_ssh master={{ groups[['hadoop_master'][0]] }}
