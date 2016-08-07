@@ -2,10 +2,5 @@
 - name: Create hadoop master user
   user: name=hadoop comment="Hadoop user"
 
-- name: Copy SSH pub key from master
-  shell: cat ~hadoop/.ssh/id_*.pub
-  delegate_to: "{{ master_node }}"
-  register: pubkey
-
 - name: Add master key to authorized_keys
-  authorized_key: user=hadoop key="{{ pubkey.stdout }}"
+  authorized_key: user=hadoop key="{{ master_pubkey }}"
