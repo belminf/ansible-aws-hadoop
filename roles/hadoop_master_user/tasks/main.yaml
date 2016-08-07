@@ -1,0 +1,3 @@
+---
+- name: Create hadoop user
+  user: name=hadoop comment="Hadoop user" generate_ssh_key=yes

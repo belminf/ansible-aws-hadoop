@@ -11,6 +11,7 @@
     keypair: "{{ lookup('env','AWS_DEFAULT_KEYPAIR') }}"
     master_nodes_count: 1
     data_nodes_count: 2
+  tags: aws
   tasks:
 
     - name: VPC networking
@@ -89,11 +90,11 @@
         assign_public_ip: yes
         wait: true
         instance_tags:
-          Group: hadoop_master
+          Group: hadoop_master_nodes
         exact_count: "{{ master_nodes_count }}"
         count_tag:
-          Group: hadoop_master
-      register: ec2_master
+          Group: hadoop_master_nodes
+      register: ec2_master_nodes
     
     - name: Data node EC2 instances
       ec2:
@@ -106,33 +107,34 @@
         assign_public_ip: yes
         wait: true
         instance_tags:
-          Group: hadoop_datanodes
+          Group: hadoop_data_nodes
         exact_count: "{{ data_nodes_count }}"
         count_tag:
-          Group: hadoop_datanodes
-      register: ec2_datanode
+          Group: hadoop_data_nodes
+      register: ec2_data_nodes
 
     - name: Gather master instances
       add_host: hostname={{ item.public_ip }} groups={{ item.tags.Group }},hadoop
-      with_items: "{{ ec2_master.tagged_instances }}"
+      with_items: "{{ ec2_master_nodes.tagged_instances }}"
       changed_when: no
 
     - name: Gather datanode instances
       add_host: hostname={{ item.public_ip }} groups={{ item.tags.Group }},hadoop
-      with_items: "{{ ec2_datanode.tagged_instances }}"
+      with_items: "{{ ec2_data_nodes.tagged_instances }}"
       changed_when: no
 
     - name: Wait for SSH to come up
       wait_for: host={{ item.public_dns_name }} port=22 delay=60 timeout=320 state=started
       with_items: 
-        - "{{ ec2_master.instances }}"
-        - "{{ ec2_datanode.instances }}"
+        - "{{ ec2_master_nodes.instances }}"
+        - "{{ ec2_data_nodes.instances }}"
 
-- hosts: hadoop
+- name: Bootstrap EC2 instances
+  hosts: hadoop
   remote_user: ubuntu
   gather_facts: no
   become: yes
-
+  tags: bootstrap
   pre_tasks:
 
     - name: Verify python installed
@@ -144,16 +146,22 @@
       raw: apt-get -y install python python-simplejson
       when: python_installed|failed
 
-- hosts: hadoop_master
+- name: Root configuration for Hadoop masters
+  hosts: hadoop_master_nodes
   remote_user: ubuntu
   become: yes
+  tags: config
   roles:
     - openjdk8
-    - passwordless_ssh
+    - hadoop_master_user
 
-- hosts: hadoop_datanodes
+- name: Configuration for Hadoop data nodes
+  hosts: hadoop_data_nodes
   remote_user: ubuntu
   become: yes
+  tags: config
   roles:
     - openjdk8
-    - passwordless_ssh master={{ groups[['hadoop_master'][0]] }}
+    - hadoop_slave_user
+  vars:
+    - master_node: "{{ groups['hadoop_master_nodes'][0] }}"
