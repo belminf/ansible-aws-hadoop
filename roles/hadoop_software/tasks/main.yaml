@@ -15,6 +15,6 @@
     dest: /home/hadoop/.bashrc
     line: export {{ item }}
   with_items:
-    - HADOOP_INSTALL=/home/ubuntu/hadoop
+    - HADOOP_INSTALL=/home/hadoop/hadoop
     - HADOOP_CONF_DIR=${HADOOP_INSTALL}/etc/hadoop
     - PATH=$PATH:${HADOOP_INSTALL}/bin
