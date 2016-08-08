@@ -1,5 +1,5 @@
 ---
-- name: Configuration for all Hadoop nodes
+- name: Requirements for all Hadoop nodes
   hosts: hadoop
   gather_facts: yes
   remote_user: ubuntu
@@ -9,7 +9,7 @@
     - openjdk8
     - hadoop_hosts_file
 
-- name: Configuration for Hadoop masters
+- name: Requirements for Hadoop masters
   hosts: hadoop_master_nodes
   remote_user: ubuntu
   become: yes
@@ -22,7 +22,7 @@
       register: master_pubkey
       changed_when: False
 
-- name: Configuration for Hadoop data nodes
+- name: Requirements for Hadoop data nodes
   hosts: hadoop_data_nodes
   remote_user: ubuntu
   become: yes
@@ -30,4 +30,16 @@
   vars:
     - master_pubkey: "{{ hostvars[groups['hadoop_master_nodes'][0]].master_pubkey.stdout }}"
   roles:
-    - hadoop_slave_user 
+    - hadoop_slave_user
+
+- name: Installation for Hadoop nodes
+  hosts: hadoop
+  gather_facts: yes
+  remote_user: ubuntu
+  become: yes
+  become_user: hadoop
+  tags: config
+  vars:
+    hadoop_version: 2.7.1
+  roles:
+    - hadoop_software

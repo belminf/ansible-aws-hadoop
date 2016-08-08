@@ -1,0 +1,2 @@
+---
+hadoop_software_url: "http://apache.claz.org/hadoop/common/hadoop-{{ hadoop_version }}/hadoop-{{ hadoop_version }}.tar.gz"
