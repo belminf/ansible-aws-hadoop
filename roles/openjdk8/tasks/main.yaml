@@ -3,3 +3,8 @@
   apt: pkg={{ item }} update_cache=yes state=latest install_recommends=yes
   with_items:
     - openjdk-8-jdk-headless
+
+- name: Adding JAVA_HOME to environemnt
+  lineinfile:
+    dest: /etc/environment
+    line: JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
