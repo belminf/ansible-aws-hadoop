@@ -147,4 +147,3 @@
       when: python_installed|failed
 
 - include: hadoop.yaml
-

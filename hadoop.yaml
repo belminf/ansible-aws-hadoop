@@ -1,5 +1,5 @@
 ---
-- name: Configure all Hadoop nodes
+- name: Configuration for all Hadoop nodes
   hosts: hadoop
   gather_facts: yes
   remote_user: ubuntu
@@ -9,7 +9,7 @@
     - openjdk8
     - hadoop_hosts_file
 
-- name: Configure Hadoop masters
+- name: Configuration for Hadoop masters
   hosts: hadoop_master_nodes
   remote_user: ubuntu
   become: yes
@@ -22,7 +22,7 @@
       register: master_pubkey
       changed_when: False
 
-- name: Configure Hadoop data nodes
+- name: Configuration for Hadoop data nodes
   hosts: hadoop_data_nodes
   remote_user: ubuntu
   become: yes
