@@ -1,3 +1,4 @@
 boto
 ansible>=2
 httplib2
+awscli
