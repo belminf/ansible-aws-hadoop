@@ -1,3 +1,11 @@
 ---
 - name: Create hadoop slave user
   user: name=hadoop comment="Hadoop user" generate_ssh_key=yes shell=/bin/bash
+
+- name: Copy SSH pubkey
+  shell: cat ~hadoop/.ssh/id_*.pub
+  register: pubkey
+  changed_when: False
+
+- name: Add master key to authorized_keys
+  authorized_key: user=hadoop key={{ pubkey.stdout }}
