@@ -4,7 +4,7 @@ Creates an EC2 deployment of Hadoop.
 Requires [AWS CLI](https://aws.amazon.com/cli/) along with some Python libraries and environment variables.
 
 ## Ubuntu 14.04
-    $ sudo apt-get update; sudo apt-get install -y libssl-dev
+    $ sudo apt-get update; sudo apt-get install -y libssl-dev python-pip
     
 ## Python
     $ pip install -r requirements.txt
