@@ -1,4 +1,4 @@
-Creates an EC2 deployment of hadoop.
+Creates an EC2 deployment of Hadoop.
 
 # Requirements
 Requires [AWS CLI](https://aws.amazon.com/cli/) along with some Python libraries and environment variables.
