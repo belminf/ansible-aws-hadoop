@@ -13,10 +13,10 @@ ff02::3 ip6-allhosts
 
 # Hadoop masters
 {% for host in groups['hadoop_master_nodes'] %}
-master{{ '%02d'|format(loop.index) }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}
+{{ hostvars[host].ansible_default_ipv4.address }} master{{ '%02d'|format(loop.index) }}
 {% endfor %}
 
 # Hadoop slaves
 {% for host in groups['hadoop_data_nodes'] %}
-slave{{ '%02d'|format(loop.index) }} {{ hostvars[host].ansible_default_ipv4.address }}
+{{ hostvars[host].ansible_default_ipv4.address }} slave{{ '%02d'|format(loop.index) }} 
 {% endfor %}
