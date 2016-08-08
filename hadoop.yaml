@@ -1,0 +1,33 @@
+---
+- name: Configure all Hadoop nodes
+  hosts: hadoop
+  gather_facts: yes
+  remote_user: ubuntu
+  become: yes
+  tags: config
+  roles:
+    - openjdk8
+    - hadoop_hosts_file
+
+- name: Configure Hadoop masters
+  hosts: hadoop_master_nodes
+  remote_user: ubuntu
+  become: yes
+  tags: config
+  roles:
+    - hadoop_master_user
+  tasks:
+    - name: Copy SSH pub key from master
+      shell: cat ~hadoop/.ssh/id_*.pub
+      register: master_pubkey
+      changed_when: False
+
+- name: Configure Hadoop data nodes
+  hosts: hadoop_data_nodes
+  remote_user: ubuntu
+  become: yes
+  tags: config
+  vars:
+    - master_pubkey: "{{ hostvars[groups['hadoop_master_nodes'][0]].master_pubkey.stdout }}"
+  roles:
+    - hadoop_slave_user 
