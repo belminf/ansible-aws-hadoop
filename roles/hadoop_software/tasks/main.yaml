@@ -10,11 +10,23 @@
   file: dest=~hadoop/hadoop src="~hadoop/{{ hadoop_software_url | basename | splitext | first | splitext | first }}" state=link
 #"
 
-- name: Adding environemnt configuration 
+- name: Adding environment configuration 
   lineinfile:
     dest: /home/hadoop/.bashrc
-    line: export {{ item }}
+    line: "{{ item.env }}"
+    regexp: "{{ item.regex | default('^{{ item.env }}$') }}"
   with_items:
-    - HADOOP_INSTALL=/home/hadoop/hadoop
-    - HADOOP_CONF_DIR=${HADOOP_INSTALL}/etc/hadoop
-    - PATH=$PATH:${HADOOP_INSTALL}/bin
+    - env: export HADOOP_INSTALL=/home/hadoop/hadoop
+      regex: ^export HADOOP_INSTALL
+    - env: export HADOOP_CONF_DIR=${HADOOP_INSTALL}/etc/hadoop
+      regex: ^export HADOOP_CONF_DIR
+    - env: export PATH=$PATH:${HADOOP_INSTALL}/bin:${HADOOP_INSTALL}/sbin
+
+- name: Hadoop configuration files
+  template: src={{ item }}.j2 dest=~hadoop/hadoop/etc/hadoop/{{ item }} mode=0644
+  with_items:
+    - mapred-site.xml
+    - core-site.xml
+    - yarn-site.xml
+    - hdfs-site.xml
+    - slaves

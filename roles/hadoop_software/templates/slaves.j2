@@ -1,0 +1,3 @@
+{% for host in groups['hadoop_data_nodes'] %}
+slave{{ '%02d'|format(loop.index) }}
+{% endfor %}
